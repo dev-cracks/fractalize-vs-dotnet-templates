@@ -1,15 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <VSTemplate Version="3.0.0" xmlns="http://schemas.microsoft.com/developer/vstemplate/2005" Type="Item">
-	<TemplateData>
-		<Name>New clean Class (File-Scoped Namespace)</Name>
-		<Description>Creates a new C# clean class with a file-scoped namespace.</Description>
-		<Icon>__TemplateIcon.ico</Icon>
-		<ProjectType>CSharp</ProjectType>
-		<DefaultName>Class1.cs</DefaultName>
-		<SortKey>1000</SortKey>
-		<TargetFileName>$safeitemname$.cs</TargetFileName>
-	</TemplateData>
-	<TemplateContent>
-		<ProjectItem TargetFileName="$safeitemname$.cs" ReplaceParameters="true">NewCleanClassTemplate.cs</ProjectItem>
-	</TemplateContent>
+    <TemplateData>
+        <Name>New clean Class (File-Scoped Namespace)</Name>
+        <Description>Creates a new C# clean class with a file-scoped namespace.</Description>
+        <Icon>__TemplateIcon.ico</Icon>
+        <ProjectType>CSharp</ProjectType>
+        <DefaultName>Class1.cs</DefaultName>
+        <SortKey>1000</SortKey>
+        <TargetFileName>$safeitemname$.cs</TargetFileName>
+    </TemplateData>
+    <TemplateContent>
+        <ProjectItem TargetFileName="$safeitemname$.cs" ReplaceParameters="true">NewCleanClassTemplate.cs</ProjectItem>
+    </TemplateContent>
 </VSTemplate>

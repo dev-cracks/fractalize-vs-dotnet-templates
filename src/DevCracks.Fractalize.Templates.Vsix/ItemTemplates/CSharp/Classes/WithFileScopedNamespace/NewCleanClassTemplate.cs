@@ -1,4 +1,4 @@
-﻿namespace $rootnamespace$;
+namespace $rootnamespace$;
 
 /// <summary>
 /// This is a clean class template with file-scoped namespace.

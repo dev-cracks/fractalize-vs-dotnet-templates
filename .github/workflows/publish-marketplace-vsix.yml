@@ -8,6 +8,9 @@ on:
       - 'src/**'
       - '.github/workflows/publish-marketplace-vsix.yml'
 
+permissions:
+  contents: read
+
 jobs:
   build_and_publish:
     runs-on: windows-latest
@@ -15,16 +18,18 @@ jobs:
     env:
       SOLUTION_FILE_NAME: 'DevCracks.Fractalize.Templates.sln'
       VSIX_PROJECT_NAME: 'DevCracks.Fractalize.Templates.Vsix'
-      
-      SOLUTION_DIRECTORY: 'src' 
-      BUILD_CONFIGURATION: 'Release' 
+
+      SOLUTION_DIRECTORY: 'src'
+      BUILD_CONFIGURATION: 'Release'
 
     steps:
     - name: Checkout Repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        persist-credentials: false
 
     - name: Setup .NET SDK
-      uses: actions/setup-dotnet@v4 
+      uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6.1.0
       with:
         dotnet-version: '8.x'
 
@@ -32,7 +37,7 @@ jobs:
       run: dotnet restore ${{ env.SOLUTION_DIRECTORY }}/${{ env.SOLUTION_FILE_NAME }}
 
     - name: Setup MSBuild
-      uses: microsoft/setup-msbuild@v1.1 
+      uses: microsoft/setup-msbuild@30375c66a4eea26614e0d39710365f22f8b0af57 # v3
       with:
         msbuild-version: '17.0'
 
@@ -45,20 +50,20 @@ jobs:
         /t:Build
       shell: pwsh
 
-    - name: Find VSIX File 
-      id: find_vsix 
+    - name: Find VSIX File
+      id: find_vsix
       run: |
         $searchPath = "${{ env.SOLUTION_DIRECTORY }}/${{ env.VSIX_PROJECT_NAME }}/bin/${{ env.BUILD_CONFIGURATION }}"
         Write-Host "DEBUG: Buscando archivo .vsix en el directorio: ${searchPath}"
-        
-        Write-Host "DEBUG: Contenido de ${searchPath}:" 
+
+        Write-Host "DEBUG: Contenido de ${searchPath}:"
         Get-ChildItem -Path $searchPath -ErrorAction SilentlyContinue | ForEach-Object { Write-Host " - $($_.Name)" }
 
         $vsixFiles = Get-ChildItem -Path $searchPath -Filter "*.vsix" -Recurse -ErrorAction SilentlyContinue
-        
+
         if (-not $vsixFiles) {
           Write-Host "ERROR: ¡Ningún archivo .vsix encontrado en la ruta esperada: ${searchPath}!"
-          throw "No se encontró ningún archivo .vsix." 
+          throw "No se encontró ningún archivo .vsix."
         }
 
         $foundVsixFullPath = ($vsixFiles | Select-Object -First 1 -ExpandProperty FullName)
@@ -74,7 +79,7 @@ jobs:
       shell: pwsh
 
     - name: Upload VSIX as Artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
       with:
         name: vsix-package
         path: ${{ steps.find_vsix.outputs.vsix_file }}
@@ -93,12 +98,12 @@ jobs:
 
         # 1. Obtener la ruta al source.extension.vsixmanifest
         $vsixManifestSourcePath = "${{ env.SOLUTION_DIRECTORY }}/${{ env.VSIX_PROJECT_NAME }}/source.extension.vsixmanifest"
-        
+
         # 2. Cargar el XML del manifiesto
         Write-Host "DEBUG: Leyendo contenido de source.extension.vsixmanifest de: ${vsixManifestSourcePath}"
         $rawXmlContent = Get-Content $vsixManifestSourcePath | Out-String
         Write-Host "DEBUG: Contenido RAW del XML (primeras 500 chars):"
-        Write-Host ($rawXmlContent.Substring(0, [System.Math]::Min(500, $rawXmlContent.Length)) + "...") 
+        Write-Host ($rawXmlContent.Substring(0, [System.Math]::Min(500, $rawXmlContent.Length)) + "...")
         [xml]$vsixManifestXml = $rawXmlContent
 
         # 3. Extraer detalles para el manifiesto JSON de publicación
@@ -114,22 +119,22 @@ jobs:
         # Extraer categorías del manifiesto XML de forma robusta
         $categories = @()
         Write-Host "DEBUG: Intentando extraer categorías del source.extension.vsixmanifest..."
-        
+
         $categoriesNodeParent = $vsixManifestXml.PackageManifest.Metadata.Categories
-        
+
         if ($categoriesNodeParent -and $categoriesNodeParent.Category) {
             Write-Host "DEBUG: Nodos <Category> encontrados en el XML."
             # Asegura que siempre se maneje como un array para la iteración
-            $categoryNodes = @($categoriesNodeParent.Category) 
+            $categoryNodes = @($categoriesNodeParent.Category)
 
             foreach ($categoryNode in $categoryNodes) {
                 Write-Host "DEBUG: Tipo de objeto procesando: $($categoryNode.GetType().Name)"
                 Write-Host "DEBUG: Procesando nodo de categoría (XML literal de objeto): $($categoryNode | Out-String -Stream)"
-                
+
                 $categoryText = "" # Inicializar
                 if ($categoryNode -is [System.Xml.XmlElement]) {
                     # Si es un objeto XmlElement, usar InnerText
-                    $categoryText = $categoryNode.InnerText.Trim() 
+                    $categoryText = $categoryNode.InnerText.Trim()
                     Write-Host "DEBUG: (Es XmlElement) Texto extraído: '$($categoryText)'"
                 } elseif ($categoryNode -is [string]) {
                     # Si ya es una cadena, usarla directamente
@@ -138,9 +143,9 @@ jobs:
                 } else {
                     Write-Host "DEBUG: Tipo de objeto inesperado para categoría: $($categoryNode.GetType().Name)"
                 }
-                
+
                 Write-Host "DEBUG: Texto extraído de la categoría (final): '$($categoryText)' (es nulo o vacío: $([string]::IsNullOrEmpty($categoryText)))"
-                
+
                 if (-not [string]::IsNullOrEmpty($categoryText)) {
                     $categories += $categoryText
                     Write-Host "DEBUG: Categoría XML válida añadida: '$categoryText'"
@@ -151,14 +156,14 @@ jobs:
         } else {
             Write-Host "DEBUG: No se encontró el nodo <Categories> o <Category> en el XML."
         }
-        
+
         if ($categories.Count -eq 0) {
             Write-Host "WARNING: No se encontraron categorías válidas en source.extension.vsixmanifest. Usando categorías por defecto: 'Tools', 'Productivity'."
             $categories = @("Tools", "Productivity")
         }
 
         # Construir la ruta absoluta al README.md
-        $repoRoot = "${{ github.workspace }}" 
+        $repoRoot = "${{ github.workspace }}"
         $readmePath = Join-Path -Path $repoRoot -ChildPath "README.md"
         if (-not (Test-Path -Path $readmePath)) {
             Write-Host "ERROR: El archivo README.md no se encontró en la raíz del repositorio: ${readmePath}"
@@ -177,21 +182,21 @@ jobs:
 
         # 4. Crear el contenido del manifiesto de publicación JSON con la estructura completa
         $publishManifestContent = @{
-            identity = @{ 
+            identity = @{
                 id = $extensionId
                 publisher = $publisherId
                 version = $version
-                internalName = $extensionId 
+                internalName = $extensionId
             }
             displayName = $displayName
             description = $description
-            categories = $categories 
-            galleryFlags = "Public" 
-            overview = $readmePath 
-        } | ConvertTo-Json -Depth 10 
+            categories = $categories
+            galleryFlags = "Public"
+            overview = $readmePath
+        } | ConvertTo-Json -Depth 10
 
         # 5. Guardar el manifiesto JSON en un archivo temporal
-        $publishManifestJsonPath = "${{ runner.temp }}/publishManifest.json" 
+        $publishManifestJsonPath = "${{ runner.temp }}/publishManifest.json"
         $publishManifestContent | Out-File -FilePath $publishManifestJsonPath -Encoding utf8
 
         Write-Host "DEBUG: Manifiesto JSON de publicación creado en: ${publishManifestJsonPath}"
@@ -203,6 +208,6 @@ jobs:
         # 6. Ejecutar VsixPublisher.exe con los argumentos correctos
         & "${vsixPublisherPath}" publish `
             -payload "${{ steps.find_vsix.outputs.vsix_file }}" `
-            -publishManifest "${publishManifestJsonPath}" ` 
+            -publishManifest "${publishManifestJsonPath}" `
             -personalAccessToken "${{ secrets.VS_MARKETPLACE_PAT }}"
       shell: pwsh
